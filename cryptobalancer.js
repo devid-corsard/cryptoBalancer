@@ -149,7 +149,7 @@ function updateData(target) {
   saveToLocalStorage()
 
   function getDifference() {
-    inputs.difference.value = +(row.difference = +row.usdAmount - +row.btcInUsd).toFixed(2)
+    inputs.difference.value = +(row.difference = +row.btcInUsd - +row.usdAmount).toFixed(2)
     inputs.difference.style.color = inputs.difference.value >= 0 ? 'green' : 'red'
   }
   function getBTCAmount() {
@@ -208,6 +208,3 @@ function deleteRow(target) {
 
   renderTable()
 }
-
-
-
