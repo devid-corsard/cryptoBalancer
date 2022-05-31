@@ -7,6 +7,12 @@ const values = {
   totalInUsd: "Всего $:",
 }
 
+const msg = {
+  resetAlert: 'RESET ALL DATA IN TABLE?',
+  copyDone: 'DATA COPIED. YOU SHOULD SAVE IT TO TEXT FILE',
+  pasteWarning: 'You really want to paste this?'
+}
+
 const table = document.getElementById('table')
 
 let rows = localStorage.rows
@@ -61,7 +67,7 @@ function renderInputsFrom(rows) {
       input.value = key === 'btcAmount' ? valuesObj[key] : +valuesObj[key].toFixed(2)
       input.type = 'number'
 
-      if (key === 'totalInUsd' || key === 'difference') {
+      if (key === 'totalInUsd') {
         input.readOnly = true
         input.type = 'text'
         input.style.width = '100px'
@@ -111,7 +117,7 @@ function updateData(target) {
   const key = target.className
   
   if (target.tagName === 'INPUT') {
-    if (+target.value == '') return
+    if (+target.value === '') return
     row[key] = +target.value
   }
 
@@ -145,8 +151,21 @@ function updateData(target) {
     balance()
     getBTCAmount()
   }
+  if (key === 'difference') {
+    getUsdAndBtcInUsd()
+    getBTCAmount()
+  }
   getDifference()
   saveToLocalStorage()
+
+  function getUsdAndBtcInUsd() {
+    row.usdAmount = (+row.totalInUsd - +row.difference) / 2
+    inputs.usdAmount.value = +row.usdAmount.toFixed(2)
+
+    row.btcInUsd = +row.usdAmount + +row.difference
+    inputs.btcInUsd.value = +row.btcInUsd.toFixed(2)
+
+  }
 
   function getDifference() {
     inputs.difference.value = +(row.difference = +row.btcInUsd - +row.usdAmount).toFixed(2)
@@ -168,10 +187,6 @@ function updateData(target) {
     inputs.btcInUsd.value = inputs.usdAmount.value = +(row.btcInUsd = row.usdAmount = +row.totalInUsd / 2).toFixed(2)
   }
 
-}
-
-function saveToLocalStorage() {
-  localStorage.setItem('rows', JSON.stringify(rows) )
 }
 
 function duplicateRow(target) {
@@ -200,11 +215,43 @@ function duplicateRow(target) {
 
 function deleteRow(target) {
 
-  if (rows.length < 2) return
+  if (rows.length < 2) {
+    rows = createInitialRows()
+    renderTable()
+    return
+  }
 
   const id = +target.closest('tr').id
   
   rows.splice(id, 1)
 
   renderTable()
+}
+
+function saveToLocalStorage() {
+  localStorage.setItem('rows', JSON.stringify(rows) )
+}
+
+function saveToClipBoard() {
+  navigator.clipboard.writeText(JSON.stringify(rows));
+  alert(msg.copyDone)
+}
+
+function pasteFromClipBoard() {
+  navigator.clipboard.readText().then(
+    clipText => {
+      if(confirm(msg.pasteWarning + clipText)) {
+        rows = JSON.parse(clipText)
+        renderTable()
+      }
+    }
+  )
+  
+}
+
+function resetTable() {
+  if (confirm(msg.resetAlert)) {
+    rows = createInitialRows()
+    renderTable()
+  }
 }
