@@ -1,0 +1,61 @@
+body {
+  background-color: rgb(255, 204, 198);
+}
+.table {
+  margin:auto;
+  background-color: rgb(236, 248, 255);
+
+}
+td {
+  padding: 10px;
+}
+button {
+  margin: 10px 2px;
+  font-size: 1em;
+  
+}
+.delete {
+  color: rgb(255, 0, 0);
+}
+tr {
+  border-style: none none solid;
+  border-width: 1.5px;
+  border-color: rgb(222, 222, 222);
+}
+th, input {
+  text-align: center;
+  width: 110px;
+  font-size: 1em;
+
+}
+.footer {
+  height: 40vh;
+  border-style: solid none none;
+  border-width: 1.5px;
+}
+.header {
+  border-style: none none solid;
+  border-width: 1.5px;
+  text-align: center;
+}
+.main {
+  background-color: moccasin;
+  text-align: center;
+}
+
+h1 {
+  text-align: center;
+}
+.lng-select {
+  margin-left: 80vw;
+}
+.head {
+  position: sticky;
+  top: 10;
+  background-color:lightcyan
+}
+a {
+  font-size: 1.5em;
+  margin: 0px 10px 0px;
+}
+

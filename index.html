@@ -3,73 +3,24 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crypto balancer</title>
-  <style>
-    body {
-      background-color: rgb(255, 204, 198);
-    }
-    table {
-      margin: auto;
-      background-color: rgb(236, 248, 255);
-
-    }
-    td {
-      padding: 10px;
-    }
-    button {
-      margin: 10px 2px;
-      font-size: 1em;
-      
-    }
-    .delete {
-      color: rgb(255, 0, 0);
-    }
-    tr {
-      border-style: none none solid;
-      border-width: 1.5px;
-      border-color: rgb(222, 222, 222);
-    }
-    th, input {
-      text-align: center;
-      width: 120px;
-      font-size: 1em;
-
-    }
-    .footer {
-      height: 40vh;
-      border-style: solid none none;
-      border-width: 1.5px;
-    }
-    .header {
-      height: 10vh;
-      border-style: none none solid;
-      border-width: 1.5px;
-    }
-    .table {
-      background-color: moccasin;
-    }
-    .edit-buttons {
-      text-align: center;
-    }
-    h1 {
-      text-align: center;
-    }
-  </style>
+  <title>Crypto toolkit</title>
+  <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
   <div class="header">
-    <h1>BTC Balancer</h1>
+    <h1>Crypto toolkit</h1>
+    <a href="scalping.html">Scalping</a>
+    <a href="cryptoBalancer.html">Balancer</a>
   </div>
-  <div class="table">
-    <table id="table"></table>
+  <div class="main">
+    <h1>
+      <a href="scalping.html">Scalping</a>
+    </h1>
+    <h1>
+      <a href="cryptoBalancer.html">Balancer</a>
+    </h1>
   </div>
   <div class="footer">
-    <div class="edit-buttons">
-      <button onclick="resetTable()">reset</button>
-      <button onclick="saveToClipBoard()">save to clipboard</button>
-      <button onclick="pasteFromClipBoard()">paste data</button>
-    </div>
   </div>
-  <script defer src="cryptobalancer.js"></script>
 </body>
 </html>
