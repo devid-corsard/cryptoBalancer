@@ -1,74 +1,78 @@
+class Trade {
+  constructor(trade = {}) {
+    if (trade.exchange) this.exchange = trade.exchange;
+    if (trade.name) this.name = trade.name;
+    if (trade.amount) this.amount = +trade.amount;
+    if (trade.buy) this.buy = +trade.buy;
+    if (trade.sell) this.sell = +trade.sell;
+    if (trade.fee) this.fee = +trade.fee;
+    if (trade.singlefee) this.singlefee = true;
+  }
+
+  get spent() {
+    return this.amount * this.buy
+  }
+
+  get recieved() {
+    const feeCorrection = (1 - (this.fee || 0.01) / 10) ** (this.singlefee ? 1 : 2)
+    return this.amount * this.sell * feeCorrection
+  }
+
+  get diff() {
+    if (!this.spent || !this.recieved) return ''
+    return this.recieved - this.spent
+  }
+}
+
 class Model {
-  constructor() {
-    this.deals = JSON.parse(localStorage.getItem("deals")) || [];
-    this.fee = 0.01;
+  constructor(trades) {
+    this.trades = trades;
   }
 
-  addNewDeal(dealData) {
-    const deal = {};
-    for (let key in dealData) {
-      deal[key] = "";
-    }
-    this.deals.push(deal);
+  get trades() {
+    return this._trades;
   }
-  deleteDeal(id) {
-    this.deals = this.deals.filter((item, index) => index !== id);
-  }
-  duplicateDeal(id) {
-    const newDeals = [],
-      last = this.deals.length - 1 - id === 0,
-      clone = Object.assign({}, this.deals[id]);
 
-    if (id === 0 && !last) {
-      newDeals.push(this.deals[id]);
-      newDeals.push(clone);
-      newDeals.push(...this.deals.slice(1));
-    } else if (last) {
-      newDeals.push(...this.deals);
-      newDeals.push(clone);
+  set trades(newTrades) {
+    if (newTrades && newTrades.length) {
+      this._trades = newTrades
     } else {
-      newDeals.push(...this.deals.slice(0, id));
-      newDeals.push(clone);
-      newDeals.push(...this.deals.slice(id));
-    }
-    this.deals = newDeals;
-  }
-  calculate(id, target) {
-    const deal = this.deals[id];
-
-    if (target) {
-      const key = target.className;
-      if (key === "name") {
-        this.deals[id][key] = target.value;
+      const parsedTrades = JSON.parse(localStorage.getItem('trades')) || [];
+      if (parsedTrades.length === 0) {
+        this._trades = []
       } else {
-        deal[key] = +target.value;
+        this._trades = parsedTrades.map(item => new Trade(item))
       }
     }
-
-    if (deal.buyPrice && deal.amount) {
-      deal.spend = +(deal.buyPrice * deal.amount).toFixed(8);
-    } else {
-      deal.spend = "";
-    }
-    if (deal.sellPrice && deal.amount) {
-      deal.recieved = +(deal.sellPrice * deal.amount * (1 - this.fee / 10) ** 2).toFixed(8);
-    } else {
-      deal.recieved = "";
-    }
-    if (deal.recieved && deal.spend) {
-      deal.difference = +(deal.recieved - deal.spend).toFixed(8);
-    } else {
-      deal.difference = "";
-    }
   }
+
+  addNewTrade() {
+    this.trades.push(new Trade())
+  }
+
+  editTrade(id, column, value) {
+    this.trades[id][column] = value;
+  }
+
+  deleteTrade(id) {
+    this.trades = this.trades.filter((item, index) => index !== id);
+  }
+
+  duplicateTrade(id) {
+    this.trades = this.trades.reduce( (res, cur, index) => {
+      if (index === id) return res.concat([cur, new Trade(cur)])
+      return res.concat(cur)
+    }, [])
+  }
+
   saveToLocalStorage() {
-    localStorage.setItem("deals", JSON.stringify(this.deals));
+    localStorage.setItem("trades", JSON.stringify(this.trades));
   }
 }
 
 class View {
   constructor() {
-    this.dealData = {
+    this.columns = {
       name: {
         readonly: false,
         type: "text",
@@ -81,19 +85,19 @@ class View {
         en: "Amount",
         ua: "Кількість",
       },
-      buyPrice: {
+      buy: {
         readonly: false,
         type: "number",
         en: "Buy price",
         ua: "Ціна покупки",
       },
-      spend: {
+      spent: {
         readonly: true,
         type: "text",
-        en: "$ spend",
+        en: "$ spent",
         ua: "Витрачено $",
       },
-      sellPrice: {
+      sell: {
         readonly: false,
         type: "number",
         en: "Sell price",
@@ -105,7 +109,7 @@ class View {
         en: "$ recieved",
         ua: "Отримано $",
       },
-      difference: {
+      diff: {
         readonly: true,
         type: "text",
         en: "Difference",
@@ -155,10 +159,9 @@ class View {
       },
     };
     this.lng = localStorage.getItem("lng") || "en";
-    this.app = this.getElement(".main");
+    this.app = document.querySelector(".main");
     this.table = this.createElement("table", "table");
     this.headRow = this.createHead();
-    
 
     this.addButton = this.createElement(
       "button",
@@ -206,76 +209,79 @@ class View {
     return element;
   }
 
-  // Retrieve an element from the DOM
-  getElement(selector) {
-    const element = document.querySelector(selector);
-
-    return element;
-  }
-
   createHead() {
     const headRow = this.createElement("tr", "head");
-    for (let key in this.dealData) {
-      if (key === 'name') continue
-      const th = this.createElement("th", false, this.dealData[key][this.lng]);
+    for (const key in this.columns) {
+      if (key === "name") continue;
+      const th = this.createElement("th", false, this.columns[key][this.lng]);
       headRow.append(th);
     }
     return headRow;
   }
 
-  displayDeals(deals) {
+  displayTrades(trades = []) {
     while (this.table.children.length > 1) {
       this.table.removeChild(this.table.lastChild);
     }
-    if (deals.length === 0) {
-      return;
-    } else {
-      deals.forEach((deal, index) => {
-        const tr = this.createElement("tr"),
-              name = this.createElement('input', 'name');
-        
-        tr.id = index;
+    
+    if (trades.length === 0) return;
+    let id = 0;
 
-        Object.keys(deal).forEach((key) => {
-          if (key === 'name') return;
-          const td = this.createElement("td");
-          const input = this.createElement("input", key);
 
-          input.type = this.dealData[key].type;
-          input.readOnly = this.dealData[key].readonly;
-          input.value = deal[key];
+    for (const trade of trades) {
+      const tr = this.createElement("tr"),
+        name = this.createElement("input", "name");
 
-          td.append(input);
-          tr.append(td);
-        });
 
-        if (index === 0 || deal.name !== deals[index-1].name) {
-          name.value = deal.name
-          // divName.append(name);
-          tr.firstChild.prepend(name);
-          tr.firstChild.style.width = '110px';
 
-        }
-        const tdButtons = this.createElement('td')
-        const delButton = this.createElement("button", "delete", "X");
-        const duplicateButton = this.createElement(
-          "button",
-          "duplicate",
-          this.text.cloneButton[this.lng]
+      for (const column in this.columns) {
+
+        if (column === "name") continue;
+        const td = this.createElement("td");
+        const input = this.createElement("input", column);
+
+        input.type = this.columns[column].type;
+        input.readOnly = this.columns[column].readonly;
+        input.value = trade[column] || '';
+
+        td.append(input);
+        tr.append(td);
+
+      };
+
+      if (id === 0 || trade.name !== trades[id - 1].name) {
+        name.value = trade.name || '';
+        tr.firstChild.prepend(name);
+        tr.firstChild.style.width = "110px";
+      }
+      const tdButtons = this.createElement("td");
+      const delButton = this.createElement(
+        "button",
+        "delete",
+        "X"
         );
-        
-        tdButtons.append(duplicateButton, delButton)
-        tr.append(tdButtons)
-        this.table.append(tr);
-      });
-    }
+      const duplicateButton = this.createElement(
+        "button",
+        "duplicate",
+        this.text.cloneButton[this.lng]
+        );
+
+      tdButtons.append(duplicateButton, delButton);
+      tr.append(tdButtons);
+      this.table.append(tr);
+      tr.id = id++;
+
+    };
   }
 
-  updateDealOnInput(id, deals) {
+  updateTradeOnInput(id, trades) {
     const tr = document.getElementById(id);
-    tr.querySelector(".spend").value = deals[id].spend;
-    tr.querySelector(".recieved").value = deals[id].recieved;
-    tr.querySelector(".difference").value = deals[id].difference;
+    const updatedValues = ['spent', 'recieved', 'diff']
+    for (const value of updatedValues) {
+      if (trades[id][value]) {
+        tr.querySelector(`.${value}`).value = trades[id][value]
+      }
+    }
   }
 }
 
@@ -283,7 +289,7 @@ class Controller {
   constructor(model, view) {
     this.model = model;
     this.view = view;
-    this.view.displayDeals(this.model.deals);
+    this.view.displayTrades(this.model.trades);
     this.view.app.addEventListener("click", this.handleClicks);
     this.view.app.addEventListener("input", this.handleInput);
 
@@ -293,11 +299,16 @@ class Controller {
 
   handleClicks = (e) => {
     const action = e.target.className;
-
     if (!action || e.target.tagName !== "BUTTON") return;
-    if (action === "addNew") this.model.addNewDeal(this.view.dealData);
-    if (action === "duplicate") this.model.duplicateDeal(+e.target.closest('tr').id);
-    if (action === "delete") this.model.deleteDeal(+e.target.closest('tr').id);
+
+    let id
+    if (action === 'duplicate' || action === 'delete') {
+      id = +(e.target.closest("tr").id)
+    }
+
+    if (action === "addNew") this.model.addNewTrade();
+    if (action === "duplicate") this.model.duplicateTrade(id);
+    if (action === "delete") this.model.deleteTrade(id);
     if (action === "paste") this.pasteFromClipBoard();
     if (action === "reset") this.resetTable();
     if (action === "recalculate") this.recalculateAll();
@@ -305,43 +316,45 @@ class Controller {
       this.saveToClipBoard();
       return;
     }
-    this.view.displayDeals(this.model.deals);
+    this.view.displayTrades(this.model.trades);
     this.model.saveToLocalStorage();
   };
 
   handleInput = (e) => {
-    const id = +e.target.closest("tr").id;
+    const target = e.target
+    const id = +target.closest("tr").id;
     if (id || id === 0) {
-      this.model.calculate(id, e.target);
-      if (e.target.className !== 'name') {
-        this.view.updateDealOnInput(id, this.model.deals);
+      const column = target.className
+      const value = target.value
+
+      this.model.editTrade(id, column, value);
+
+      if (column !== "name") {
+        this.view.updateTradeOnInput(id, this.model.trades);
       }
       this.model.saveToLocalStorage();
     }
   };
 
   handleLngChange = (e) => {
-    if (e.target.id === "lng") {
-      localStorage.setItem("lng", e.target.value);
-      location.reload();
-    }
+    if (e.target.id !== "lng") return;
+    localStorage.setItem("lng", e.target.value);
+    location.reload();
   };
+
   checkLng = () => {
-    if (localStorage.getItem("lng")) {
-      document.getElementById("lng").value = localStorage.getItem("lng");
-    }
+    const lng = localStorage.getItem("lng");
+    if (!lng) return;
+    document.getElementById("lng").value = lng;
   };
 
   recalculateAll = () => {
-    this.model.deals.forEach((e, i) => {
-      this.model.calculate(i, false);
-      this.view.displayDeals(this.model.deals);
-      this.model.saveToLocalStorage();
-    });
+    this.view.displayTrades(this.model.trades);
+    this.model.saveToLocalStorage();
   };
 
   saveToClipBoard = () => {
-    navigator.clipboard.writeText(localStorage.getItem("deals"));
+    navigator.clipboard.writeText(localStorage.getItem("trades"));
     alert(this.view.text.copyDone[this.view.lng]);
   };
 
@@ -352,18 +365,16 @@ class Controller {
       } else if (
         confirm(this.view.text.pasteWarning[this.view.lng] + clipText)
       ) {
-        this.model.deals = JSON.parse(clipText);
-        this.view.displayDeals(this.model.deals);
-        this.model.saveToLocalStorage();
+        localStorage.setItem('trades', clipText)
+        this.view.displayTrades(this.model.deals);
       }
     });
   };
 
   resetTable = () => {
     if (confirm(this.view.text.resetWarning[this.view.lng])) {
-      this.model.deals = [];
-      this.view.displayDeals(this.model.deals);
-      this.model.saveToLocalStorage();
+      localStorage.removeItem('trades');
+      this.model.trades = [];
     }
   };
 }
