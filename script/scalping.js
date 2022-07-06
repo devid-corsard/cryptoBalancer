@@ -1,12 +1,13 @@
 class Trade {
   constructor(trade = {}) {
-    if (trade.exchange) this.exchange = trade.exchange;
-    if (trade.name) this.name = trade.name;
-    if (trade.amount) this.amount = +trade.amount;
-    if (trade.buy) this.buy = +trade.buy;
-    if (trade.sell) this.sell = +trade.sell;
-    if (trade.fee) this.fee = +trade.fee;
-    if (trade.singlefee) this.singlefee = true;
+    ;({
+      name: this.name = "",
+      amount: this.amount = "",
+      buy: this.buy = "",
+      sell: this.sell = "",
+      fee: this.fee = 0.01,
+      singlefee: this.singlefee = false,
+    } = trade)
   }
 
   get spent() {
@@ -14,34 +15,35 @@ class Trade {
   }
 
   get recieved() {
-    const feeCorrection = (1 - (this.fee || 0.01) / 10) ** (this.singlefee ? 1 : 2)
+    const feeCorrection =
+      (1 - (this.fee || 0.01) / 10) ** (this.singlefee ? 1 : 2)
     return this.amount * this.sell * feeCorrection
   }
 
   get diff() {
-    if (!this.spent || !this.recieved) return ''
+    if (!this.spent || !this.recieved) return ""
     return this.recieved - this.spent
   }
 }
 
 class Model {
   constructor(trades) {
-    this.trades = trades;
+    this.trades = trades
   }
 
   get trades() {
-    return this._trades;
+    return this._trades
   }
 
   set trades(newTrades) {
     if (newTrades && newTrades.length) {
       this._trades = newTrades
     } else {
-      const parsedTrades = JSON.parse(localStorage.getItem('trades')) || [];
+      const parsedTrades = JSON.parse(localStorage.getItem("trades")) || []
       if (parsedTrades.length === 0) {
         this._trades = []
       } else {
-        this._trades = parsedTrades.map(item => new Trade(item))
+        this._trades = parsedTrades.map((item) => new Trade(item))
       }
     }
   }
@@ -51,22 +53,22 @@ class Model {
   }
 
   editTrade(id, column, value) {
-    this.trades[id][column] = value;
+    this.trades[id][column] = value
   }
 
   deleteTrade(id) {
-    this.trades = this.trades.filter((item, index) => index !== id);
+    this.trades = this.trades.filter((item, index) => index !== id)
   }
 
   duplicateTrade(id) {
-    this.trades = this.trades.reduce( (res, cur, index) => {
+    this.trades = this.trades.reduce((res, cur, index) => {
       if (index === id) return res.concat([cur, new Trade(cur)])
       return res.concat(cur)
     }, [])
   }
 
   saveToLocalStorage() {
-    localStorage.setItem("trades", JSON.stringify(this.trades));
+    localStorage.setItem("trades", JSON.stringify(this.trades))
   }
 }
 
@@ -115,7 +117,7 @@ class View {
         en: "Difference",
         ua: "Різниця",
       },
-    };
+    }
     this.text = {
       cloneButton: {
         en: "Clone",
@@ -157,39 +159,39 @@ class View {
         en: "Reset all data in table?",
         ua: "Очистити всі дані в таблиці?",
       },
-    };
-    this.lng = localStorage.getItem("lng") || "en";
-    this.app = document.querySelector(".main");
-    this.table = this.createElement("table", "table");
-    this.headRow = this.createHead();
+    }
+    this.lng = localStorage.getItem("lng") || "en"
+    this.app = document.querySelector(".main")
+    this.table = this.createElement("table", "table")
+    this.headRow = this.createHead()
 
     this.addButton = this.createElement(
       "button",
       "addNew",
       this.text.addNewButton[this.lng]
-    );
+    )
     this.saveButton = this.createElement(
       "button",
       "save",
       this.text.saveButton[this.lng]
-    );
+    )
     this.pasteButton = this.createElement(
       "button",
       "paste",
       this.text.pasteButton[this.lng]
-    );
+    )
     this.resetButton = this.createElement(
       "button",
       "reset",
       this.text.resetButton[this.lng]
-    );
+    )
     this.recalculateButton = this.createElement(
       "button",
       "recalculate",
       this.text.recalculateButton[this.lng]
-    );
+    )
 
-    this.table.append(this.headRow);
+    this.table.append(this.headRow)
     this.app.append(
       this.table,
       this.addButton,
@@ -197,86 +199,76 @@ class View {
       this.pasteButton,
       this.resetButton,
       this.recalculateButton
-    );
+    )
   }
 
   // Create an element with an optional CSS class and inner text
   createElement(tag, className, innerText) {
-    const element = document.createElement(tag);
-    if (className) element.classList.add(className);
-    if (innerText) element.innerText = innerText;
+    const element = document.createElement(tag)
+    if (className) element.classList.add(className)
+    if (innerText) element.innerText = innerText
 
-    return element;
+    return element
   }
 
   createHead() {
-    const headRow = this.createElement("tr", "head");
+    const headRow = this.createElement("tr", "head")
     for (const key in this.columns) {
-      if (key === "name") continue;
-      const th = this.createElement("th", false, this.columns[key][this.lng]);
-      headRow.append(th);
+      if (key === "name") continue
+      const th = this.createElement("th", false, this.columns[key][this.lng])
+      headRow.append(th)
     }
-    return headRow;
+    return headRow
   }
 
   displayTrades(trades = []) {
     while (this.table.children.length > 1) {
-      this.table.removeChild(this.table.lastChild);
+      this.table.removeChild(this.table.lastChild)
     }
-    
-    if (trades.length === 0) return;
-    let id = 0;
 
+    if (trades.length === 0) return
+    let id = 0
 
     for (const trade of trades) {
       const tr = this.createElement("tr"),
-        name = this.createElement("input", "name");
-
-
+        name = this.createElement("input", "name")
 
       for (const column in this.columns) {
+        if (column === "name") continue
+        const td = this.createElement("td")
+        const input = this.createElement("input", column)
 
-        if (column === "name") continue;
-        const td = this.createElement("td");
-        const input = this.createElement("input", column);
+        input.type = this.columns[column].type
+        input.readOnly = this.columns[column].readonly
+        input.value = trade[column] || ""
 
-        input.type = this.columns[column].type;
-        input.readOnly = this.columns[column].readonly;
-        input.value = trade[column] || '';
-
-        td.append(input);
-        tr.append(td);
-
-      };
+        td.append(input)
+        tr.append(td)
+      }
 
       if (id === 0 || trade.name !== trades[id - 1].name) {
-        name.value = trade.name || '';
-        tr.firstChild.prepend(name);
-        tr.firstChild.style.width = "110px";
+        name.value = trade.name || ""
+        tr.firstChild.prepend(name)
+        tr.firstChild.style.width = "110px"
       }
-      const tdButtons = this.createElement("td");
-      const delButton = this.createElement(
-        "button",
-        "delete",
-        "X"
-        );
+      const tdButtons = this.createElement("td")
+      const delButton = this.createElement("button", "delete", "X")
       const duplicateButton = this.createElement(
         "button",
         "duplicate",
         this.text.cloneButton[this.lng]
-        );
+      )
 
-      tdButtons.append(duplicateButton, delButton);
-      tr.append(tdButtons);
-      this.table.append(tr);
-      tr.id = id++;
-
-    };
+      tdButtons.append(duplicateButton, delButton)
+      tr.append(tdButtons)
+      this.table.append(tr)
+      tr.id = id++
+    }
   }
 
   updateTradeOnInput(id, trades) {
-    const tr = document.getElementById(id);
-    const updatedValues = ['spent', 'recieved', 'diff']
+    const tr = document.getElementById(id)
+    const updatedValues = ["spent", "recieved", "diff"]
     for (const value of updatedValues) {
       if (trades[id][value]) {
         tr.querySelector(`.${value}`).value = trades[id][value]
@@ -287,96 +279,117 @@ class View {
 
 class Controller {
   constructor(model, view) {
-    this.model = model;
-    this.view = view;
-    this.view.displayTrades(this.model.trades);
-    this.view.app.addEventListener("click", this.handleClicks);
-    this.view.app.addEventListener("input", this.handleInput);
+    this.model = model
+    this.view = view
+    this.view.displayTrades(this.model.trades)
+    this.view.app.addEventListener("click", this.handleClicks)
+    this.view.app.addEventListener("input", this.handleInput)
 
-    this.checkLng();
-    document.addEventListener("input", this.handleLngChange);
+    this.checkLng()
+    document.addEventListener("input", this.handleLngChange)
   }
 
-  handleClicks = (e) => {
-    const action = e.target.className;
-    if (!action || e.target.tagName !== "BUTTON") return;
+  handleClicks = async (e) => {
+    const action = e.target.className
+    if (!action || e.target.tagName !== "BUTTON") return
 
-    let id
-    if (action === 'duplicate' || action === 'delete') {
-      id = +(e.target.closest("tr").id)
-    }
+    let id = +e.target.closest("tr")?.id
 
-    if (action === "addNew") this.model.addNewTrade();
-    if (action === "duplicate") this.model.duplicateTrade(id);
-    if (action === "delete") this.model.deleteTrade(id);
-    if (action === "paste") this.pasteFromClipBoard();
-    if (action === "reset") this.resetTable();
-    if (action === "recalculate") this.recalculateAll();
-    if (action === "save") {
-      this.saveToClipBoard();
-      return;
-    }
-    this.view.displayTrades(this.model.trades);
-    this.model.saveToLocalStorage();
-  };
+    Promise.resolve()
+      .then(() => {
+        switch (action) {
+          case "addNew":
+            this.model.addNewTrade()
+            break
+          case "duplicate":
+            this.model.duplicateTrade(id)
+            break
+          case "delete":
+            this.model.deleteTrade(id)
+            break
+          case "paste":
+            this.pasteFromClipBoard()
+            break
+          case "reset":
+            this.resetTable()
+            break
+          case "recalculate":
+            this.recalculateAll()
+            break
+          case "save":
+            this.saveToClipBoard()
+          default:
+            return
+        }
+        console.log('switch')
+      })
+      .then(() => {
+        console.log('disp save')
+        this.view.displayTrades(this.model.trades)
+        this.model.saveToLocalStorage()
+      })
+    
+  }
 
   handleInput = (e) => {
     const target = e.target
-    const id = +target.closest("tr").id;
+    const id = +target.closest("tr").id
     if (id || id === 0) {
       const column = target.className
       const value = target.value
 
-      this.model.editTrade(id, column, value);
+      this.model.editTrade(id, column, value)
 
       if (column !== "name") {
-        this.view.updateTradeOnInput(id, this.model.trades);
+        this.view.updateTradeOnInput(id, this.model.trades)
       }
-      this.model.saveToLocalStorage();
+      this.model.saveToLocalStorage()
     }
-  };
+  }
 
   handleLngChange = (e) => {
-    if (e.target.id !== "lng") return;
-    localStorage.setItem("lng", e.target.value);
-    location.reload();
-  };
+    if (e.target.id !== "lng") return
+    localStorage.setItem("lng", e.target.value)
+    location.reload()
+  }
 
   checkLng = () => {
-    const lng = localStorage.getItem("lng");
-    if (!lng) return;
-    document.getElementById("lng").value = lng;
-  };
+    const lng = localStorage.getItem("lng")
+    if (!lng) return
+    document.getElementById("lng").value = lng
+  }
 
   recalculateAll = () => {
-    this.view.displayTrades(this.model.trades);
-    this.model.saveToLocalStorage();
-  };
+    this.view.displayTrades(this.model.trades)
+    this.model.saveToLocalStorage()
+  }
 
   saveToClipBoard = () => {
-    navigator.clipboard.writeText(localStorage.getItem("trades"));
-    alert(this.view.text.copyDone[this.view.lng]);
-  };
+    navigator.clipboard.writeText(localStorage.getItem("trades"))
+    alert(this.view.text.copyDone[this.view.lng])
+  }
 
   pasteFromClipBoard = () => {
     navigator.clipboard.readText().then((clipText) => {
       if (clipText[0] !== "[") {
-        alert(this.view.text.wrongPaste[this.view.lng] + clipText);
+        alert(this.view.text.wrongPaste[this.view.lng] + clipText)
       } else if (
         confirm(this.view.text.pasteWarning[this.view.lng] + clipText)
       ) {
-        localStorage.setItem('trades', clipText)
-        this.view.displayTrades(this.model.deals);
+        localStorage.setItem("trades", clipText)
+        this.model.trades = []
+        console.log('paste');
+        // this.view.displayTrades(this.model.trades)
       }
-    });
-  };
+    })
+  }
 
   resetTable = () => {
     if (confirm(this.view.text.resetWarning[this.view.lng])) {
-      localStorage.removeItem('trades');
-      this.model.trades = [];
+      localStorage.removeItem("trades")
+      this.model.trades = []
     }
-  };
+  }
 }
 
-const app = new Controller(new Model(), new View());
+const app = new Controller(new Model(), new View())
