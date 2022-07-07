@@ -289,46 +289,38 @@ class Controller {
     document.addEventListener("input", this.handleLngChange)
   }
 
-  handleClicks = async (e) => {
+  handleClicks = (e) => {
     const action = e.target.className
     if (!action || e.target.tagName !== "BUTTON") return
 
     let id = +e.target.closest("tr")?.id
 
-    Promise.resolve()
-      .then(() => {
-        switch (action) {
-          case "addNew":
-            this.model.addNewTrade()
-            break
-          case "duplicate":
-            this.model.duplicateTrade(id)
-            break
-          case "delete":
-            this.model.deleteTrade(id)
-            break
-          case "paste":
-            this.pasteFromClipBoard()
-            break
-          case "reset":
-            this.resetTable()
-            break
-          case "recalculate":
-            this.recalculateAll()
-            break
-          case "save":
-            this.saveToClipBoard()
-          default:
-            return
-        }
-        console.log('switch')
-      })
-      .then(() => {
-        console.log('disp save')
-        this.view.displayTrades(this.model.trades)
-        this.model.saveToLocalStorage()
-      })
-    
+    switch (action) {
+      case "addNew":
+        this.model.addNewTrade()
+        break
+      case "duplicate":
+        this.model.duplicateTrade(id)
+        break
+      case "delete":
+        this.model.deleteTrade(id)
+        break
+      case "reset":
+        this.resetTable()
+        break
+      case "recalculate":
+        this.recalculateAll()
+        break
+      case "paste":
+        this.pasteFromClipBoard()
+        return
+      case "save":
+        this.saveToClipBoard()
+      default:
+        return
+    }
+    this.view.displayTrades(this.model.trades)
+    this.model.saveToLocalStorage()
   }
 
   handleInput = (e) => {
@@ -378,8 +370,7 @@ class Controller {
       ) {
         localStorage.setItem("trades", clipText)
         this.model.trades = []
-        console.log('paste');
-        // this.view.displayTrades(this.model.trades)
+        this.view.displayTrades(this.model.trades)
       }
     })
   }
