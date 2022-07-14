@@ -1,10 +1,10 @@
 const values = {
-  btcPrice: "Цена битка:",
-  btcAmount: "Битки:",
-  btcInUsd: "Биток в долларах:",
-  difference: "Разница",
-  usdAmount: "Доллары:",
-  totalInUsd: "Всего $:",
+  btcPrice: "BTC Price:",
+  btcAmount: "BTC Amount:",
+  btcInUsd: "BTC in USD:",
+  difference: "Difference:",
+  usdAmount: "USD Amount:",
+  totalInUsd: "Total in USD:",
 }
 
 const msg = {
