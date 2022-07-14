@@ -57,6 +57,10 @@ class Model {
   }
 
   deleteTrade(id) {
+    if (this.trades.length === 1) {
+      this.trades.length = 0
+      return
+    }
     this.trades = this.trades.filter((item, index) => index !== id)
   }
 
