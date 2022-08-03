@@ -1,6 +1,6 @@
 class Trade {
   constructor(trade = {}) {
-    ;({
+    ({
       name: this.name = "",
       amount: this.amount = "",
       buy: this.buy = "",
