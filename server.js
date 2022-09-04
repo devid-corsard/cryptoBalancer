@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 
-const PORT = 5005;
+const PORT = process.env.PORT || 5005;
 
 const readFile = (path) => {
   return new Promise((resolve, reject) => {
@@ -58,4 +58,4 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT);
+server.listen(PORT, () => console.log(`Listening on ${PORT}`));
