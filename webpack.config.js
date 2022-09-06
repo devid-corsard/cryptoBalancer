@@ -6,7 +6,7 @@ module.exports = {
     balancer: './src/client/balancer/cryptobalancer.js',
   },
   output: {
-    filename: '[name].min.js',
-    path: path.resolve(__dirname, 'script'),
+    filename: '[name].js',
+    path: path.resolve(__dirname, 'dist/client/static/script'),
   },
 };
