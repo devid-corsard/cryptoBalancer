@@ -6,7 +6,7 @@ import { SingleTradeModel } from './models/SingleTradeModel';
 
 dotenv.config();
 
-const app: Express = express();
+export const app: Express = express();
 const port = process.env.PORT;
 
 const PAGES = ['cryptoBalancer', 'scalping'];
@@ -124,7 +124,7 @@ app.get('/api/scalping/db', (req, res: Response<TradeType[]>) => {
 
 app.post(
   '/api/scalping/db',
-  (req: Request<never, never, CreateTradeModel>, res) => {
+  (req: Request<never, never, CreateTradeModel>, res: Response<TradeType>) => {
     if (!req.body.trade) {
       res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
       return;
@@ -134,8 +134,7 @@ app.post(
 
     db.table.push(newTrade);
 
-    res.sendStatus(HTTP_STATUSES.CREATED_201);
-    // db.table.concat(req.body.table)
+    res.status(HTTP_STATUSES.CREATED_201).json(newTrade);
   }
 );
 
@@ -172,6 +171,11 @@ app.delete('/api/scalping/db/:id', (req: Request<{ id: string }>, res) => {
     return;
   }
 
+  res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
+});
+
+app.delete('/__test__/data', (req, res) => {
+  db.table = [];
   res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
 });
 
