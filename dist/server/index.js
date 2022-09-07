@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTradeType = exports.HTTP_STATUSES = exports.app = void 0;
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
 dotenv_1.default.config();
 exports.app = (0, express_1.default)();
 const port = process.env.PORT;
@@ -85,11 +86,12 @@ exports.app.use(express_1.default.static('dist/client/static'));
 exports.app.use(express_1.default.json());
 exports.app.get(['/', '/:path'], (req, res) => {
     if (!req.params.path) {
-        res.sendFile(__dirname + '/client/index.html');
+        res.sendFile(path_1.default.resolve(__dirname + '/../client/index.html'));
         return;
     }
     if (PAGES.includes(req.params.path)) {
-        res.sendFile(__dirname + `/client/${req.params.path}.html`);
+        //path.resolve('temp/index.html')
+        res.sendFile(path_1.default.resolve(__dirname + `/../client/${req.params.path}.html`));
         return;
     }
     res.sendStatus(404);

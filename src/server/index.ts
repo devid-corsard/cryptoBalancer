@@ -1,10 +1,10 @@
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
-import { CreateTradeModel } from './models/CreateTradeModel';
 import { UpdateTradeModel } from './models/UpdateTradeModel';
 import { SingleTradeModel } from './models/SingleTradeModel';
 import { DublicateTradeModel } from './models/DublicateTradeModel';
 import { DeleteTradeModel } from './models/DeleteTradeModel';
+import path from 'path';
 
 dotenv.config();
 
@@ -107,12 +107,13 @@ app.get(
   ['/', '/:path'],
   (req: Request<{ path: string }>, res: Response<HTMLBaseElement>) => {
     if (!req.params.path) {
-      res.sendFile(__dirname + '/client/index.html');
+      res.sendFile(path.resolve(__dirname + '/../client/index.html'));
       return;
     }
 
     if (PAGES.includes(req.params.path)) {
-      res.sendFile(__dirname + `/client/${req.params.path}.html`);
+      //path.resolve('temp/index.html')
+      res.sendFile(path.resolve(__dirname + `/../client/${req.params.path}.html`));
       return;
     }
 
