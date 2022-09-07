@@ -101,7 +101,6 @@ describe('/api/scalping', () => {
       fee: newTrade.trade[4],
       singleFee: newTrade.trade[5],
     };
-    console.dir({ upadettradeafterCreation: updatedTrade1 });
 
     await request(app)
       .get('/api/scalping/db')
@@ -124,9 +123,7 @@ describe('/api/scalping', () => {
       .post('/api/scalping/db/' + updatedTrade1.id)
       .expect(HTTP_STATUSES.CREATED_201);
 
-    console.dir({ updatedTradeBeforeUnpk: updatedTrade1 });
     createdTrade3 = { ...updatedTrade1 };
-    console.dir({ createdTrade3afterUpnacking: createdTrade3 });
 
     createdTrade3.id = createdResponse.body.id;
 

@@ -3,11 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HTTP_STATUSES = void 0;
+exports.getTradeType = exports.HTTP_STATUSES = exports.app = void 0;
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-const app = (0, express_1.default)();
+exports.app = (0, express_1.default)();
 const port = process.env.PORT;
 const PAGES = ['cryptoBalancer', 'scalping'];
 exports.HTTP_STATUSES = {
@@ -67,7 +67,8 @@ const db = {
     ],
 };
 const getTradeType = (trade, id) => {
-    const [name, amount, buyPrice, sellPrice, fee, singleFee] = trade;
+    const blankNewTrade = ['', '', '', '', 0.01, false];
+    const [name, amount, buyPrice, sellPrice, fee, singleFee] = trade || blankNewTrade;
     const newTrade = {
         id: id || +new Date(),
         name,
@@ -79,9 +80,10 @@ const getTradeType = (trade, id) => {
     };
     return newTrade;
 };
-app.use(express_1.default.static('dist/client/static'));
-app.use(express_1.default.json());
-app.get(['/', '/:path'], (req, res) => {
+exports.getTradeType = getTradeType;
+exports.app.use(express_1.default.static('dist/client/static'));
+exports.app.use(express_1.default.json());
+exports.app.get(['/', '/:path'], (req, res) => {
     if (!req.params.path) {
         res.sendFile(__dirname + '/client/index.html');
         return;
@@ -92,21 +94,27 @@ app.get(['/', '/:path'], (req, res) => {
     }
     res.sendStatus(404);
 });
-app.get('/api/scalping/db', (req, res) => {
-    console.log('got req from front');
+exports.app.get('/api/scalping/db', (req, res) => {
     res.json(db.table);
 });
-app.post('/api/scalping/db', (req, res) => {
-    if (!req.body.trade) {
-        res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
+exports.app.post('/api/scalping/db', (req, res) => {
+    const newTrade = (0, exports.getTradeType)();
+    db.table.push(newTrade);
+    res.status(exports.HTTP_STATUSES.CREATED_201).json({ id: newTrade.id });
+});
+exports.app.post('/api/scalping/db/:id', (req, res) => {
+    const duplicatedTrade = db.table.find((t) => t.id === +req.params.id);
+    if (!duplicatedTrade) {
+        res.sendStatus(exports.HTTP_STATUSES.NOT_FOUND_404);
         return;
     }
-    const newTrade = getTradeType(req.body.trade);
-    db.table.push(newTrade);
-    res.sendStatus(exports.HTTP_STATUSES.CREATED_201);
-    // db.table.concat(req.body.table)
+    ;
+    const duplicatedTradeIndex = db.table.indexOf(duplicatedTrade);
+    const newTrade = Object.assign(Object.assign({}, duplicatedTrade), { id: +new Date });
+    db.table.splice(duplicatedTradeIndex + 1, 0, newTrade);
+    res.status(exports.HTTP_STATUSES.CREATED_201).json({ id: newTrade.id });
 });
-app.put('/api/scalping/db/:id', (req, res) => {
+exports.app.put('/api/scalping/db/:id', (req, res) => {
     if (!req.body.trade) {
         res.sendStatus(exports.HTTP_STATUSES.BAD_REQUEST_400);
         return;
@@ -117,11 +125,11 @@ app.put('/api/scalping/db/:id', (req, res) => {
         return;
     }
     const editedTradeIndex = db.table.indexOf(editedTrade);
-    const newTrade = getTradeType(req.body.trade, +req.params.id);
+    const newTrade = (0, exports.getTradeType)(req.body.trade, +req.params.id);
     db.table[editedTradeIndex] = newTrade;
     res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
 });
-app.delete('/api/scalping/db/:id', (req, res) => {
+exports.app.delete('/api/scalping/db/:id', (req, res) => {
     const tableAfterDelete = db.table.filter((t) => t.id !== +req.params.id);
     if (tableAfterDelete.length + 1 === db.table.length) {
         db.table = tableAfterDelete;
@@ -132,6 +140,11 @@ app.delete('/api/scalping/db/:id', (req, res) => {
     }
     res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
 });
-app.listen(port, () => {
+/** clear db for tests */
+exports.app.delete('/__test__/data', (req, res) => {
+    db.table = [];
+    res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
+});
+exports.app.listen(port, () => {
     console.log(`⚡️[server]: Server is running at https://localhost:${port}`);
 });
