@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import { CreateTradeModel } from './models/CreateTradeModel';
 import { UpdateTradeModel } from './models/UpdateTradeModel';
 import { SingleTradeModel } from './models/SingleTradeModel';
+import { DublicateTradeModel } from './models/DublicateTradeModel';
+import { DeleteTradeModel } from './models/DeleteTradeModel';
 
 dotenv.config();
 
@@ -80,8 +82,9 @@ const db: { table: TradeType[] } = {
   ],
 };
 
-const getTradeType = (trade: SingleTradeModel, id?: number): TradeType => {
-  const [name, amount, buyPrice, sellPrice, fee, singleFee] = trade;
+export const getTradeType = (trade?: SingleTradeModel, id?: number): TradeType => {
+  const blankNewTrade: SingleTradeModel = ['', '', '', '', 0.01, false];
+  const [name, amount, buyPrice, sellPrice, fee, singleFee] = trade || blankNewTrade;
 
   const newTrade: TradeType = {
     id: id || +new Date(),
@@ -118,23 +121,33 @@ app.get(
 );
 
 app.get('/api/scalping/db', (req, res: Response<TradeType[]>) => {
-  console.log('got req from front');
   res.json(db.table);
 });
 
+app.post('/api/scalping/db', (req, res: Response<{ id: number }>) => {
+  const newTrade: TradeType = getTradeType();
+
+  db.table.push(newTrade);
+
+  res.status(HTTP_STATUSES.CREATED_201).json({id: newTrade.id});
+});
+
 app.post(
-  '/api/scalping/db',
-  (req: Request<never, never, CreateTradeModel>, res: Response<TradeType>) => {
-    if (!req.body.trade) {
-      res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
+  '/api/scalping/db/:id',
+  (req: Request<DublicateTradeModel>, res: Response<{id: number}>) => {
+    const duplicatedTrade = db.table.find((t) => t.id === +req.params.id);
+
+    if (!duplicatedTrade) {
+      res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
       return;
-    }
+    };
 
-    const newTrade: TradeType = getTradeType(req.body.trade);
+    const duplicatedTradeIndex = db.table.indexOf(duplicatedTrade);
+    const newTrade: TradeType = { ...duplicatedTrade, id: +new Date };
 
-    db.table.push(newTrade);
+    db.table.splice(duplicatedTradeIndex + 1, 0, newTrade);
 
-    res.status(HTTP_STATUSES.CREATED_201).json(newTrade);
+    res.status(HTTP_STATUSES.CREATED_201).json({id: newTrade.id});
   }
 );
 
@@ -161,7 +174,7 @@ app.put(
   }
 );
 
-app.delete('/api/scalping/db/:id', (req: Request<{ id: string }>, res) => {
+app.delete('/api/scalping/db/:id', (req: Request<DeleteTradeModel>, res) => {
   const tableAfterDelete = db.table.filter((t) => t.id !== +req.params.id);
 
   if (tableAfterDelete.length + 1 === db.table.length) {
@@ -174,6 +187,7 @@ app.delete('/api/scalping/db/:id', (req: Request<{ id: string }>, res) => {
   res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
 });
 
+/** clear db for tests */
 app.delete('/__test__/data', (req, res) => {
   db.table = [];
   res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
