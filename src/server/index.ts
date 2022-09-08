@@ -6,6 +6,7 @@ import { DublicateTradeModel } from './models/DublicateTradeModel';
 import { DeleteTradeModel } from './models/DeleteTradeModel';
 import path from 'path';
 import { TradeViewModel } from './models/TradeViewModel';
+import { Pool } from 'pg';
 
 dotenv.config();
 
@@ -21,16 +22,18 @@ export const HTTP_STATUSES = {
 
   BAD_REQUEST_400: 400,
   NOT_FOUND_404: 404,
+
+  INTERNAL_SERVER_ERROR_500: 500,
 };
 
 type TradeType = {
   id: number;
   name: string;
   amount: string;
-  buyPrice: string;
-  sellPrice: string;
+  buyprice: string;
+  sellprice: string;
   fee: number;
-  singleFee: boolean;
+  singlefee: boolean;
 };
 
 const db: { table: TradeType[] } = {
@@ -39,70 +42,78 @@ const db: { table: TradeType[] } = {
       id: 1,
       name: 'btc',
       amount: '0.003',
-      buyPrice: '20800',
-      sellPrice: '',
+      buyprice: '20800',
+      sellprice: '',
       fee: 0.01,
-      singleFee: false,
+      singlefee: false,
     },
     {
       id: 2,
       name: 'btc',
       amount: '0.003',
-      buyPrice: '21500',
-      sellPrice: '',
+      buyprice: '21500',
+      sellprice: '',
       fee: 0.01,
-      singleFee: false,
+      singlefee: false,
     },
     {
       id: 3,
       name: 'btc',
       amount: '0.003',
-      buyPrice: '19800',
-      sellPrice: '',
+      buyprice: '19800',
+      sellprice: '',
       fee: 0.01,
-      singleFee: false,
+      singlefee: false,
     },
     {
       id: 4,
       name: 'ltc',
       amount: '1',
-      buyPrice: '71',
-      sellPrice: '',
+      buyprice: '71',
+      sellprice: '',
       fee: 0.01,
-      singleFee: false,
+      singlefee: false,
     },
     {
       id: 5,
       name: 'ltc',
       amount: '1',
-      buyPrice: '75',
-      sellPrice: '',
+      buyprice: '75',
+      sellprice: '',
       fee: 0.01,
-      singleFee: false,
+      singlefee: false,
     },
   ],
 };
 
 export const getTradeType = (trade?: SingleTradeModel, id?: number): TradeType => {
   const blankNewTrade: SingleTradeModel = ['', '', '', '', 0.01, false];
-  const [name, amount, buyPrice, sellPrice, fee, singleFee] = trade || blankNewTrade;
+  const [name, amount, buyprice, sellprice, fee, singlefee] = trade || blankNewTrade;
 
   const newTrade: TradeType = {
     id: id || +new Date(),
     name,
     amount,
-    buyPrice,
-    sellPrice,
+    buyprice,
+    sellprice,
     fee,
-    singleFee,
+    singlefee,
   };
 
   return newTrade;
 };
 
 export const getTradesViewModel = (table: TradeType[]): TradeViewModel[] => {
-  return table.map(t => [t.name, t.amount, t.buyPrice, t.sellPrice, t.fee, t.singleFee, t.id])
+  return table.map(t => [t.name, t.amount, t.buyprice, t.sellprice, t.fee, t.singlefee, t.id])
 }
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // ssl: {
+  //   rejectUnauthorized: false,
+  // },
+});
+
 
 app.use(express.static('dist/client/static'));
 
@@ -125,16 +136,32 @@ app.get(
   }
 );
 
-app.get('/api/scalping/db', (req, res: Response<TradeViewModel[]>) => {
-  res.json(getTradesViewModel(db.table));
+app.get('/api/scalping/db', async (req, res: Response<TradeViewModel[]>) => {
+  try {
+    const client = await pool.connect();
+    const { rows } = await client.query('SELECT * FROM trade');
+    const dbmapped: TradeType[] = rows.map((t) => ((t.id = +t.id), t));
+    db.table = dbmapped;
+    res.json(getTradesViewModel(dbmapped));
+    client.release();
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+  }
 });
 
-app.post('/api/scalping/db', (req, res: Response<{ id: number }>) => {
-  const newTrade: TradeType = getTradeType();
-
-  db.table.push(newTrade);
-
-  res.status(HTTP_STATUSES.CREATED_201).json({id: newTrade.id});
+app.post('/api/scalping/db', async (req, res: Response<{ id: number }>) => {
+  try {
+    const client = await pool.connect();
+    const dbres = await client.query('insert into trade (fee, singleFee) values (0.01, true)  RETURNING *');
+    const newTrade: TradeType = getTradeType(undefined, +dbres.rows[0].id);
+    db.table.push(newTrade);
+    res.status(HTTP_STATUSES.CREATED_201).json({id: +dbres.rows[0].id});
+    client.release();
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+  }
 });
 
 app.post(
