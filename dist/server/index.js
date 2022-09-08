@@ -82,6 +82,9 @@ const getTradeType = (trade, id) => {
     return newTrade;
 };
 exports.getTradeType = getTradeType;
+const getTradesViewModel = (table) => {
+    return table.map(t => [t.name, t.amount, t.buyPrice, t.sellPrice, t.fee, t.singleFee, t.id]);
+};
 exports.app.use(express_1.default.static('dist/client/static'));
 exports.app.use(express_1.default.json());
 exports.app.get(['/', '/:path'], (req, res) => {
@@ -90,14 +93,13 @@ exports.app.get(['/', '/:path'], (req, res) => {
         return;
     }
     if (PAGES.includes(req.params.path)) {
-        //path.resolve('temp/index.html')
         res.sendFile(path_1.default.resolve(__dirname + `/../client/${req.params.path}.html`));
         return;
     }
     res.sendStatus(404);
 });
 exports.app.get('/api/scalping/db', (req, res) => {
-    res.json(db.table);
+    res.json(getTradesViewModel(db.table));
 });
 exports.app.post('/api/scalping/db', (req, res) => {
     const newTrade = (0, exports.getTradeType)();

@@ -11,7 +11,7 @@
     "dev": "nodemon --inspect ./dist/server/index.js",
     "test": "jest",
     "build": "webpack --mode production",
-    "build:w": "webpack --mode production --watch",
+    "build:w": "webpack --mode development --watch",
     "start": "node ./dist/server/index.js"
   },
   "repository": {

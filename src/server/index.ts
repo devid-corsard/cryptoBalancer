@@ -5,6 +5,7 @@ import { SingleTradeModel } from './models/SingleTradeModel';
 import { DublicateTradeModel } from './models/DublicateTradeModel';
 import { DeleteTradeModel } from './models/DeleteTradeModel';
 import path from 'path';
+import { TradeViewModel } from './models/TradeViewModel';
 
 dotenv.config();
 
@@ -99,6 +100,10 @@ export const getTradeType = (trade?: SingleTradeModel, id?: number): TradeType =
   return newTrade;
 };
 
+const getTradesViewModel = (table: TradeType[]): TradeViewModel[] => {
+  return table.map(t => [t.name, t.amount, t.buyPrice, t.sellPrice, t.fee, t.singleFee, t.id])
+}
+
 app.use(express.static('dist/client/static'));
 
 app.use(express.json());
@@ -112,7 +117,6 @@ app.get(
     }
 
     if (PAGES.includes(req.params.path)) {
-      //path.resolve('temp/index.html')
       res.sendFile(path.resolve(__dirname + `/../client/${req.params.path}.html`));
       return;
     }
@@ -121,8 +125,8 @@ app.get(
   }
 );
 
-app.get('/api/scalping/db', (req, res: Response<TradeType[]>) => {
-  res.json(db.table);
+app.get('/api/scalping/db', (req, res: Response<TradeViewModel[]>) => {
+  res.json(getTradesViewModel(db.table));
 });
 
 app.post('/api/scalping/db', (req, res: Response<{ id: number }>) => {
@@ -169,7 +173,6 @@ app.put(
     const editedTradeIndex = db.table.indexOf(editedTrade);
 
     const newTrade: TradeType = getTradeType(req.body.trade, +req.params.id);
-
     db.table[editedTradeIndex] = newTrade;
     res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
   }

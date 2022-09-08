@@ -8,6 +8,7 @@ export default class Trade {
         this.sell = '',
         this.fee = 0.01,
         this.singlefee = false,
+        this.id = 0,
       ] = trade;
     } else {
       ({
