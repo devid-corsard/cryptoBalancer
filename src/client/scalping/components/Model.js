@@ -1,8 +1,12 @@
 import Trade from './Trade.js';
 
+const DELAY_WHILE_EDITING = 1000;
+
 export default class Model {
   constructor() {
     this.trades;
+    this.isSended = true;
+    this.delayTimerId;
   }
 
   async getTradesFromServer() {
@@ -39,11 +43,20 @@ export default class Model {
     const editedTrade = this.trades[id];
     editedTrade[column] = value;
 
-    fetch(location.origin + '/api/scalping/db/' + editedTrade.id, {
-      method: 'PUT',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({trade: editedTrade.toArray()})
-    })
+    const sendData = () => {
+      fetch(location.origin + '/api/scalping/db/' + editedTrade.id, {
+        method: 'PUT',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({trade: editedTrade.toArray()})
+      })
+      this.isSended = true
+    }
+    if (!this.isSended) {
+      clearInterval(this.delayTimerId);
+    };
+    this.delayTimerId = setTimeout(sendData, DELAY_WHILE_EDITING);
+    this.isSended = false;
+
   }
 
   deleteTrade(id) {
