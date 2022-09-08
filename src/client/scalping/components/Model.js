@@ -2,13 +2,23 @@ import Trade from './Trade.js';
 
 export default class Model {
   constructor() {
-    this.trades = this.getFromLocalStorage();
+    this.trades;
   }
+
+  async getTradesFromServer() {
+    const res = await fetch(location.origin + '/api/scalping/db', {
+      method: 'get',
+    });
+    const j = await res.json();
+    this.trades = j.map(t => new Trade(t))
+    return this.trades;
+  };
+
+  
 
   getFromLocalStorage() {
     const parsedTrades = JSON.parse(localStorage.getItem('trades')) || [];
       if (parsedTrades.length === 0) {
-
         return [];
       } else {
         return parsedTrades.map((item) => new Trade(item));

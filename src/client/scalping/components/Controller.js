@@ -2,7 +2,9 @@ export default class Controller {
   constructor(model, view) {
     this.model = model;
     this.view = view;
-    this.view.displayTrades(this.model.trades);
+    this.model.getTradesFromServer()
+      .then(t => this.view.displayTrades(t));
+    // this.view.displayTrades(this.model.trades);
     this.view.app.addEventListener('click', this.handleClicks);
     this.view.app.addEventListener('input', this.handleInput);
 
