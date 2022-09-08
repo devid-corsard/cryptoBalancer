@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTradeType = exports.HTTP_STATUSES = exports.app = void 0;
+exports.getTradesViewModel = exports.getTradeType = exports.HTTP_STATUSES = exports.app = void 0;
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
@@ -85,6 +85,7 @@ exports.getTradeType = getTradeType;
 const getTradesViewModel = (table) => {
     return table.map(t => [t.name, t.amount, t.buyPrice, t.sellPrice, t.fee, t.singleFee, t.id]);
 };
+exports.getTradesViewModel = getTradesViewModel;
 exports.app.use(express_1.default.static('dist/client/static'));
 exports.app.use(express_1.default.json());
 exports.app.get(['/', '/:path'], (req, res) => {
@@ -99,7 +100,7 @@ exports.app.get(['/', '/:path'], (req, res) => {
     res.sendStatus(404);
 });
 exports.app.get('/api/scalping/db', (req, res) => {
-    res.json(getTradesViewModel(db.table));
+    res.json((0, exports.getTradesViewModel)(db.table));
 });
 exports.app.post('/api/scalping/db', (req, res) => {
     const newTrade = (0, exports.getTradeType)();

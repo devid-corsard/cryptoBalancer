@@ -100,7 +100,7 @@ export const getTradeType = (trade?: SingleTradeModel, id?: number): TradeType =
   return newTrade;
 };
 
-const getTradesViewModel = (table: TradeType[]): TradeViewModel[] => {
+export const getTradesViewModel = (table: TradeType[]): TradeViewModel[] => {
   return table.map(t => [t.name, t.amount, t.buyPrice, t.sellPrice, t.fee, t.singleFee, t.id])
 }
 

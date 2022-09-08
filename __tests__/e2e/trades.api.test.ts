@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { app, getTradeType, HTTP_STATUSES } from '../../src/server';
+import { app, getTradesViewModel, getTradeType, HTTP_STATUSES } from '../../src/server';
 import { UpdateTradeModel } from '../../src/server/models/UpdateTradeModel';
 
 describe('/api/scalping', () => {
@@ -23,7 +23,7 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [createdTrade1]);
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([createdTrade1]));
   });
 
   let createdTrade2 = getTradeType(undefined, -Infinity);
@@ -38,7 +38,7 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [createdTrade1, createdTrade2]);
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([createdTrade1, createdTrade2]));
   });
 
   it('SHOULD NOT update trade with invalid ID', async () => {
@@ -53,7 +53,7 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [createdTrade1, createdTrade2]);
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([createdTrade1, createdTrade2]));
   });
 
   it('SHOULD NOT update trade with empty or invalid input', async () => {
@@ -79,7 +79,7 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [createdTrade1, createdTrade2]);
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([createdTrade1, createdTrade2]));
   });
 
   let updatedTrade1: any = null;
@@ -104,7 +104,7 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [updatedTrade1, createdTrade2]);
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([updatedTrade1, createdTrade2]));
   });
 
   it('SHOULD not dublicate trade with invalid id', async () => {
@@ -114,7 +114,7 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [updatedTrade1, createdTrade2]);
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([updatedTrade1, createdTrade2]));
   });
 
   let createdTrade3: any = null;
@@ -129,11 +129,11 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([
         updatedTrade1,
         createdTrade3,
         createdTrade2,
-      ]);
+      ]));
   });
 
   it('SHOULD delete 1 and 2 trade', async () => {
@@ -143,7 +143,7 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [createdTrade3, createdTrade2]);
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([createdTrade3, createdTrade2]));
 
     await request(app)
       .delete('/api/scalping/db/' + createdTrade2.id)
@@ -151,6 +151,6 @@ describe('/api/scalping', () => {
 
     await request(app)
       .get('/api/scalping/db')
-      .expect(HTTP_STATUSES.OK_200, [createdTrade3]);
+      .expect(HTTP_STATUSES.OK_200, getTradesViewModel([createdTrade3]));
   });
 });
