@@ -26,14 +26,20 @@ export const HTTP_STATUSES = {
   INTERNAL_SERVER_ERROR_500: 500,
 };
 
+const SQL = {
+  GET_ALL: 'SELECT * FROM trade ORDER BY view_order',
+  INSERT_NEW: 'INSERT INTO trade (fee, single_fee) VALUES (0.01, true) RETURNING id',
+  DELETE_BY_ID: 'DELETE FROM trade WHERE ID = $1::INT',
+}
+
 type TradeType = {
   id: number;
   name: string;
   amount: string;
-  buyprice: string;
-  sellprice: string;
+  buy_price: string;
+  sell_price: string;
   fee: number;
-  singlefee: boolean;
+  single_fee: boolean;
 };
 
 const db: { table: TradeType[] } = {
@@ -42,69 +48,69 @@ const db: { table: TradeType[] } = {
       id: 1,
       name: 'btc',
       amount: '0.003',
-      buyprice: '20800',
-      sellprice: '',
+      buy_price: '20800',
+      sell_price: '',
       fee: 0.01,
-      singlefee: false,
+      single_fee: false,
     },
     {
       id: 2,
       name: 'btc',
       amount: '0.003',
-      buyprice: '21500',
-      sellprice: '',
+      buy_price: '21500',
+      sell_price: '',
       fee: 0.01,
-      singlefee: false,
+      single_fee: false,
     },
     {
       id: 3,
       name: 'btc',
       amount: '0.003',
-      buyprice: '19800',
-      sellprice: '',
+      buy_price: '19800',
+      sell_price: '',
       fee: 0.01,
-      singlefee: false,
+      single_fee: false,
     },
     {
       id: 4,
       name: 'ltc',
       amount: '1',
-      buyprice: '71',
-      sellprice: '',
+      buy_price: '71',
+      sell_price: '',
       fee: 0.01,
-      singlefee: false,
+      single_fee: false,
     },
     {
       id: 5,
       name: 'ltc',
       amount: '1',
-      buyprice: '75',
-      sellprice: '',
+      buy_price: '75',
+      sell_price: '',
       fee: 0.01,
-      singlefee: false,
+      single_fee: false,
     },
   ],
 };
 
 export const getTradeType = (trade?: SingleTradeModel, id?: number): TradeType => {
   const blankNewTrade: SingleTradeModel = ['', '', '', '', 0.01, false];
-  const [name, amount, buyprice, sellprice, fee, singlefee] = trade || blankNewTrade;
+  const [name, amount, buy_price, sell_price, fee, single_fee] = trade || blankNewTrade;
 
   const newTrade: TradeType = {
     id: id || +new Date(),
     name,
     amount,
-    buyprice,
-    sellprice,
+    buy_price,
+    sell_price,
     fee,
-    singlefee,
+    single_fee,
   };
 
   return newTrade;
 };
 
 export const getTradesViewModel = (table: TradeType[]): TradeViewModel[] => {
-  return table.map(t => [t.name, t.amount, t.buyprice, t.sellprice, t.fee, t.singlefee, t.id])
+  return table.map(t => [t.name, t.amount, t.buy_price, t.sell_price, t.fee, t.single_fee, t.id])
 }
 
 const pool = new Pool({
@@ -139,7 +145,7 @@ app.get(
 app.get('/api/scalping/db', async (req, res: Response<TradeViewModel[]>) => {
   try {
     const client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM trade');
+    const { rows } = await client.query(SQL.GET_ALL);
     const dbmapped: TradeType[] = rows.map((t) => ((t.id = +t.id), t));
     db.table = dbmapped;
     res.json(getTradesViewModel(dbmapped));
@@ -153,10 +159,10 @@ app.get('/api/scalping/db', async (req, res: Response<TradeViewModel[]>) => {
 app.post('/api/scalping/db', async (req, res: Response<{ id: number }>) => {
   try {
     const client = await pool.connect();
-    const dbres = await client.query('insert into trade (fee, singleFee) values (0.01, true)  RETURNING *');
-    const newTrade: TradeType = getTradeType(undefined, +dbres.rows[0].id);
+    const { rows: [ { id: newTradeId } ] } = await client.query(SQL.INSERT_NEW);
+    const newTrade: TradeType = getTradeType(undefined, +newTradeId);
     db.table.push(newTrade);
-    res.status(HTTP_STATUSES.CREATED_201).json({id: +dbres.rows[0].id});
+    res.status(HTTP_STATUSES.CREATED_201).json({id: +newTradeId});
     client.release();
   } catch (err) {
     console.error(err);
@@ -205,11 +211,19 @@ app.put(
   }
 );
 
-app.delete('/api/scalping/db/:id', (req: Request<DeleteTradeModel>, res) => {
+app.delete('/api/scalping/db/:id', async (req: Request<DeleteTradeModel>, res) => {
   const tableAfterDelete = db.table.filter((t) => t.id !== +req.params.id);
 
   if (tableAfterDelete.length + 1 === db.table.length) {
     db.table = tableAfterDelete;
+    try {
+      const client = await pool.connect();
+      await client.query(SQL.DELETE_BY_ID, [+req.params.id]);
+      client.release();
+    } catch (err) {
+      console.error(err);
+      res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
   } else {
     res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400);
     return;

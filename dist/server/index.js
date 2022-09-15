@@ -29,72 +29,77 @@ exports.HTTP_STATUSES = {
     NOT_FOUND_404: 404,
     INTERNAL_SERVER_ERROR_500: 500,
 };
+const SQL = {
+    GET_ALL: 'SELECT * FROM trade ORDER BY view_order',
+    INSERT_NEW: 'INSERT INTO trade (fee, single_fee) VALUES (0.01, true) RETURNING id',
+    DELETE_BY_ID: 'DELETE FROM trade WHERE ID = $1::INT',
+};
 const db = {
     table: [
         {
             id: 1,
             name: 'btc',
             amount: '0.003',
-            buyprice: '20800',
-            sellprice: '',
+            buy_price: '20800',
+            sell_price: '',
             fee: 0.01,
-            singlefee: false,
+            single_fee: false,
         },
         {
             id: 2,
             name: 'btc',
             amount: '0.003',
-            buyprice: '21500',
-            sellprice: '',
+            buy_price: '21500',
+            sell_price: '',
             fee: 0.01,
-            singlefee: false,
+            single_fee: false,
         },
         {
             id: 3,
             name: 'btc',
             amount: '0.003',
-            buyprice: '19800',
-            sellprice: '',
+            buy_price: '19800',
+            sell_price: '',
             fee: 0.01,
-            singlefee: false,
+            single_fee: false,
         },
         {
             id: 4,
             name: 'ltc',
             amount: '1',
-            buyprice: '71',
-            sellprice: '',
+            buy_price: '71',
+            sell_price: '',
             fee: 0.01,
-            singlefee: false,
+            single_fee: false,
         },
         {
             id: 5,
             name: 'ltc',
             amount: '1',
-            buyprice: '75',
-            sellprice: '',
+            buy_price: '75',
+            sell_price: '',
             fee: 0.01,
-            singlefee: false,
+            single_fee: false,
         },
     ],
 };
 const getTradeType = (trade, id) => {
     const blankNewTrade = ['', '', '', '', 0.01, false];
-    const [name, amount, buyprice, sellprice, fee, singlefee] = trade || blankNewTrade;
+    const [name, amount, buy_price, sell_price, fee, single_fee] = trade || blankNewTrade;
     const newTrade = {
         id: id || +new Date(),
         name,
         amount,
-        buyprice,
-        sellprice,
+        buy_price,
+        sell_price,
         fee,
-        singlefee,
+        single_fee,
     };
     return newTrade;
 };
 exports.getTradeType = getTradeType;
 const getTradesViewModel = (table) => {
-    return table.map(t => [t.name, t.amount, t.buyprice, t.sellprice, t.fee, t.singlefee, t.id]);
+    return table.map(t => [t.name, t.amount, t.buy_price, t.sell_price, t.fee, t.single_fee, t.id]);
 };
 exports.getTradesViewModel = getTradesViewModel;
 const pool = new pg_1.Pool({
@@ -119,7 +124,7 @@ exports.app.get(['/', '/:path'], (req, res) => {
 exports.app.get('/api/scalping/db', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const client = yield pool.connect();
-        const { rows } = yield client.query('SELECT * FROM trade');
+        const { rows } = yield client.query(SQL.GET_ALL);
         const dbmapped = rows.map((t) => ((t.id = +t.id), t));
         db.table = dbmapped;
         res.json((0, exports.getTradesViewModel)(dbmapped));
@@ -133,11 +138,10 @@ exports.app.get('/api/scalping/db', (req, res) => __awaiter(void 0, void 0, void
 exports.app.post('/api/scalping/db', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const client = yield pool.connect();
-        const dbres = yield client.query('insert into trade (fee, singleFee) values (0.01, true)  RETURNING *');
-        console.log(typeof dbres.rows[0].id);
-        const newTrade = (0, exports.getTradeType)(undefined, +dbres.rows[0].id);
+        const { rows: [{ id: newTradeId }] } = yield client.query(SQL.INSERT_NEW);
+        const newTrade = (0, exports.getTradeType)(undefined, +newTradeId);
         db.table.push(newTrade);
-        res.status(exports.HTTP_STATUSES.CREATED_201).json({ id: +dbres.rows[0].id });
+        res.status(exports.HTTP_STATUSES.CREATED_201).json({ id: +newTradeId });
         client.release();
     }
     catch (err) {
@@ -172,17 +176,26 @@ exports.app.put('/api/scalping/db/:id', (req, res) => {
     db.table[editedTradeIndex] = newTrade;
     res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
 });
-exports.app.delete('/api/scalping/db/:id', (req, res) => {
+exports.app.delete('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const tableAfterDelete = db.table.filter((t) => t.id !== +req.params.id);
     if (tableAfterDelete.length + 1 === db.table.length) {
         db.table = tableAfterDelete;
+        try {
+            const client = yield pool.connect();
+            yield client.query(SQL.DELETE_BY_ID, [+req.params.id]);
+            client.release();
+        }
+        catch (err) {
+            console.error(err);
+            res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+        }
     }
     else {
         res.sendStatus(exports.HTTP_STATUSES.BAD_REQUEST_400);
         return;
     }
     res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
-});
+}));
 /** clear db for tests */
 exports.app.delete('/__test__/data', (req, res) => {
     db.table = [];
