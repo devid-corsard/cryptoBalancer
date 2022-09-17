@@ -32,7 +32,8 @@ exports.HTTP_STATUSES = {
 const SQL = {
     GET_ALL: 'SELECT * FROM trade ORDER BY view_order',
     INSERT_NEW: 'INSERT INTO trade (fee, single_fee) VALUES (0.01, true) RETURNING id',
-    DELETE_BY_ID: 'DELETE FROM trade WHERE ID = $1::INT',
+    DELETE_BY_ID: 'DELETE FROM trade WHERE ID = $1',
+    UPDATE_EXISTING: 'UPDATE trade SET (name, amount, buy_price, sell_price, fee, single_fee) = ($1, $2, $3, $4, $5, $6) WHERE id = $7',
 };
 const db = {
     table: [
@@ -108,6 +109,20 @@ const pool = new pg_1.Pool({
     //   rejectUnauthorized: false,
     // },
 });
+const initLocalDbCopy = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const client = yield pool.connect();
+        const { rows } = yield client.query(SQL.GET_ALL);
+        const dbmapped = rows.map((t) => ((t.id = +t.id), t));
+        db.table = dbmapped;
+        client.release();
+        console.log('Data copied to local server memory');
+    }
+    catch (err) {
+        console.error(err);
+    }
+});
+initLocalDbCopy();
 exports.app.use(express_1.default.static('dist/client/static'));
 exports.app.use(express_1.default.json());
 exports.app.get(['/', '/:path'], (req, res) => {
@@ -161,7 +176,7 @@ exports.app.post('/api/scalping/db/:id', (req, res) => {
     db.table.splice(duplicatedTradeIndex + 1, 0, newTrade);
     res.status(exports.HTTP_STATUSES.CREATED_201).json({ id: newTrade.id });
 });
-exports.app.put('/api/scalping/db/:id', (req, res) => {
+exports.app.put('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (!req.body.trade) {
         res.sendStatus(exports.HTTP_STATUSES.BAD_REQUEST_400);
         return;
@@ -173,9 +188,21 @@ exports.app.put('/api/scalping/db/:id', (req, res) => {
     }
     const editedTradeIndex = db.table.indexOf(editedTrade);
     const newTrade = (0, exports.getTradeType)(req.body.trade, +req.params.id);
-    db.table[editedTradeIndex] = newTrade;
+    try {
+        const client = yield pool.connect();
+        //TODO: fix error when some of req.body.trade are empty string
+        yield client.query(SQL.UPDATE_EXISTING, [...req.body.trade, +req.params.id]);
+        db.table[editedTradeIndex] = newTrade;
+        console.log([...req.body.trade, +req.params.id]);
+        console.log(newTrade);
+        client.release();
+    }
+    catch (err) {
+        console.error(err);
+        res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
     res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
-});
+}));
 exports.app.delete('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const tableAfterDelete = db.table.filter((t) => t.id !== +req.params.id);
     if (tableAfterDelete.length + 1 === db.table.length) {
