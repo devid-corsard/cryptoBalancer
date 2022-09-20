@@ -78,6 +78,7 @@ exports.app.get('/api/scalping/db', (req, res) => __awaiter(void 0, void 0, void
         res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
     }
 }));
+/** CREATE NEW TRADE */
 exports.app.post('/api/scalping/db', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const client = yield pool.connect();
@@ -154,7 +155,7 @@ exports.app.delete('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 
 }));
 /** clear db for tests */
 exports.app.delete('/__test__/data', (req, res) => {
-    dbTable = 'trade_empty_for_tests';
+    // dbTable = 'trade_empty_for_tests';
     res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
 });
 exports.app.listen(port, () => {

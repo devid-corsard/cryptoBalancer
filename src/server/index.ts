@@ -81,7 +81,7 @@ app.get('/api/scalping/db', async (req, res: Response<TradeViewModel[]>) => {
         res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
     }
 });
-
+/** CREATE NEW TRADE */
 app.post('/api/scalping/db', async (req, res: Response<{ id: number }>) => {
     try {
         const client = await pool.connect();
