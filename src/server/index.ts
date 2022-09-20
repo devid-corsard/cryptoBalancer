@@ -1,12 +1,12 @@
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import { UpdateTradeModel } from './models/UpdateTradeModel';
-import { SingleTradeModel } from './models/SingleTradeModel';
 import { DublicateTradeModel } from './models/DublicateTradeModel';
 import { DeleteTradeModel } from './models/DeleteTradeModel';
 import path from 'path';
 import { TradeViewModel } from './models/TradeViewModel';
 import { Pool } from 'pg';
+import { SingleTradeModel } from './models/SingleTradeModel';
 
 dotenv.config();
 
@@ -16,128 +16,41 @@ const port = process.env.PORT;
 const PAGES = ['cryptoBalancer', 'scalping'];
 
 export const HTTP_STATUSES = {
-  OK_200: 200,
-  CREATED_201: 201,
-  NO_CONTENT_204: 204,
+    OK_200: 200,
+    CREATED_201: 201,
+    NO_CONTENT_204: 204,
 
-  BAD_REQUEST_400: 400,
-  NOT_FOUND_404: 404,
+    BAD_REQUEST_400: 400,
+    NOT_FOUND_404: 404,
 
-  INTERNAL_SERVER_ERROR_500: 500,
+    INTERNAL_SERVER_ERROR_500: 500,
 };
-
+let dbTable = 'trade'
 const SQL = {
-  GET_ALL: 'SELECT * FROM trade ORDER BY view_order',
-  INSERT_NEW: 'INSERT INTO trade (fee, single_fee) VALUES (0.01, true) RETURNING id',
-  DELETE_BY_ID: 'DELETE FROM trade WHERE ID = $1',
-  UPDATE_EXISTING: 'UPDATE trade SET (name, amount, buy_price, sell_price, fee, single_fee) = ($1, $2, $3, $4, $5, $6) WHERE id = $7',
-}
-
-type TradeType = {
-  id: number;
-  name: string;
-  amount: string;
-  buy_price: string;
-  sell_price: string;
-  fee: number;
-  single_fee: boolean;
+    GET_ALL: `SELECT id, name, amount, buy_price, sell_price, fee, single_fee FROM ${dbTable} ORDER BY view_order`,
+    INSERT_NEW: `INSERT INTO ${dbTable} (fee, single_fee, view_order) VALUES (0.01, true, $1) RETURNING id`,
+    DELETE_BY_ID: `DELETE FROM ${dbTable} WHERE ID = $1`,
+    UPDATE_EXISTING: `UPDATE ${dbTable} SET (name, amount, buy_price, sell_price, fee, single_fee) = ($1, $2, $3, $4, $5, $6) WHERE id = $7`,
+    GET_MAX_VIEW_ORDER: `SELECT MAX(view_order) as max_view_order FROM ${dbTable}`,
+    SELECT_BY_ID: `SELECT name, amount, buy_price, sell_price, fee, single_fee, view_order FROM ${dbTable} WHERE id = $1`,
+    UPDATE_ALL_VIEW_ORDER: `UPDATE ${dbTable} SET view_order = view_order + 1 WHERE view_order > $1`,
+    INSERT_WITH_DATA: `INSERT INTO ${dbTable} (name, amount, buy_price, sell_price, fee, single_fee, view_order) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
 };
 
-const db: { table: TradeType[] } = {
-  table: [
-    {
-      id: 1,
-      name: 'btc',
-      amount: '0.003',
-      buy_price: '20800',
-      sell_price: '',
-      fee: 0.01,
-      single_fee: false,
-    },
-    {
-      id: 2,
-      name: 'btc',
-      amount: '0.003',
-      buy_price: '21500',
-      sell_price: '',
-      fee: 0.01,
-      single_fee: false,
-    },
-    {
-      id: 3,
-      name: 'btc',
-      amount: '0.003',
-      buy_price: '19800',
-      sell_price: '',
-      fee: 0.01,
-      single_fee: false,
-    },
-    {
-      id: 4,
-      name: 'ltc',
-      amount: '1',
-      buy_price: '71',
-      sell_price: '',
-      fee: 0.01,
-      single_fee: false,
-    },
-    {
-      id: 5,
-      name: 'ltc',
-      amount: '1',
-      buy_price: '75',
-      sell_price: '',
-      fee: 0.01,
-      single_fee: false,
-    },
-  ],
+export const getTradesViewModel = (table: any[]): TradeViewModel[] => {
+    return table.map((t) => [t.name, +t.amount, +t.buy_price, +t.sell_price, +t.fee, t.single_fee, +t.id]);
 };
 
-export const getTradeType = (trade?: SingleTradeModel, id?: number): TradeType => {
-  const blankNewTrade: SingleTradeModel = ['', '', '', '', 0.01, false];
-  const [name, amount, buy_price, sell_price, fee, single_fee] = trade || blankNewTrade;
-
-  const newTrade: TradeType = {
-    id: id || +new Date(),
-    name,
-    amount,
-    buy_price,
-    sell_price,
-    fee,
-    single_fee,
-  };
-
-  return newTrade;
+const getSingleTrade = (trade: any): SingleTradeModel => {
+    return [trade.name, trade.amount, trade.buy_price, trade.sell_price, trade.fee, trade.single_fee];
 };
-
-export const getTradesViewModel = (table: TradeType[]): TradeViewModel[] => {
-  return table.map(t => [t.name, t.amount, t.buy_price, t.sell_price, t.fee, t.single_fee, t.id])
-}
-
-
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // ssl: {
-  //   rejectUnauthorized: false,
-  // },
+    connectionString: process.env.DATABASE_URL,
+    // ssl: {
+    //   rejectUnauthorized: false,
+    // },
 });
-
-const initLocalDbCopy = async () => {
-  try {
-    const client = await pool.connect();
-    const { rows } = await client.query(SQL.GET_ALL);
-    const dbmapped: TradeType[] = rows.map((t) => ((t.id = +t.id), t));
-    db.table = dbmapped;
-    client.release();
-    console.log('Data copied to local server memory');
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-initLocalDbCopy();
-
 
 app.use(express.static('dist/client/static'));
 
@@ -145,121 +58,109 @@ app.use(express.json());
 
 app.get(['/', '/:path'], (req: Request<{ path: string }>, res: Response<HTMLBaseElement>) => {
     if (!req.params.path) {
-      res.sendFile(path.resolve(__dirname + '/../client/index.html'));
-      return;
+        res.sendFile(path.resolve(__dirname + '/../client/index.html'));
+        return;
     }
 
     if (PAGES.includes(req.params.path)) {
-      res.sendFile(path.resolve(__dirname + `/../client/${req.params.path}.html`));
-      return;
+        res.sendFile(path.resolve(__dirname + `/../client/${req.params.path}.html`));
+        return;
     }
 
     res.sendStatus(404);
-  }
-);
+});
 
 app.get('/api/scalping/db', async (req, res: Response<TradeViewModel[]>) => {
-  try {
-    const client = await pool.connect();
-    const { rows } = await client.query(SQL.GET_ALL);
-    const dbmapped: TradeType[] = rows.map((t) => ((t.id = +t.id), t));
-    db.table = dbmapped;
-    res.json(getTradesViewModel(dbmapped));
-    client.release();
-  } catch (err) {
-    console.error(err);
-    res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
-  }
+    try {
+        const client = await pool.connect();
+        const { rows } = await client.query(SQL.GET_ALL);
+        res.json(getTradesViewModel(rows));
+        client.release();
+    } catch (err) {
+        console.error(err);
+        res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
 });
 
 app.post('/api/scalping/db', async (req, res: Response<{ id: number }>) => {
-  try {
-    const client = await pool.connect();
-    const { rows: [ { id: newTradeId } ] } = await client.query(SQL.INSERT_NEW);
-    const newTrade: TradeType = getTradeType(undefined, +newTradeId);
-    db.table.push(newTrade);
-    res.status(HTTP_STATUSES.CREATED_201).json({id: +newTradeId});
-    client.release();
-  } catch (err) {
-    console.error(err);
-    res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
-  }
+    try {
+        const client = await pool.connect();
+        const {
+            rows: [{ max_view_order }],
+        } = await client.query(SQL.GET_MAX_VIEW_ORDER);
+        const {
+            rows: [{ id }],
+        } = await client.query(SQL.INSERT_NEW, [max_view_order + 1]);
+
+        res.status(HTTP_STATUSES.CREATED_201).json({ id: +id });
+        client.release();
+    } catch (err) {
+        console.error(err);
+        res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
 });
 
-app.post('/api/scalping/db/:id', (req: Request<DublicateTradeModel>, res: Response<{id: number}>) => {
-    const duplicatedTrade = db.table.find((t) => t.id === +req.params.id);
+app.post('/api/scalping/db/:id', async (req: Request<DublicateTradeModel>, res: Response<{ id: number }>) => {
+    try {
+        const client = await pool.connect();
+        const {
+            rows: [dubTrade],
+        } = await client.query(SQL.SELECT_BY_ID, [+req.params.id]);
+        if (!dubTrade) {
+            res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
+            return;
+        }
 
-    if (!duplicatedTrade) {
-      res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
-      return;
-    };
+        const newTrade: SingleTradeModel = getSingleTrade(dubTrade);
+        await client.query(SQL.UPDATE_ALL_VIEW_ORDER, [dubTrade.view_order]);
+        const {
+            rows: [{ id }],
+        } = await client.query(SQL.INSERT_WITH_DATA, [...newTrade, dubTrade.view_order + 1]);
 
-    const duplicatedTradeIndex = db.table.indexOf(duplicatedTrade);
-    const newTrade: TradeType = { ...duplicatedTrade, id: +new Date };
-
-    db.table.splice(duplicatedTradeIndex + 1, 0, newTrade);
-
-    res.status(HTTP_STATUSES.CREATED_201).json({id: newTrade.id});
-  }
-);
+        res.status(HTTP_STATUSES.CREATED_201).json({ id: +id });
+        client.release();
+    } catch (err) {
+        console.error(err);
+        res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
+});
 
 app.put('/api/scalping/db/:id', async (req: Request<{ id: string }, never, UpdateTradeModel>, res) => {
     if (!req.body.trade) {
-      res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400);
-      return;
+        res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400);
+        return;
     }
-    const editedTrade = db.table.find((t) => t.id === +req.params.id);
-
-    if (!editedTrade) {
-      res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
-      return;
-    }
-    const editedTradeIndex = db.table.indexOf(editedTrade);
-    const newTrade: TradeType = getTradeType(req.body.trade, +req.params.id);
 
     try {
-      const client = await pool.connect();
-      //TODO: fix error when some of req.body.trade are empty string
-      await client.query(SQL.UPDATE_EXISTING, [...req.body.trade, +req.params.id]);
-      db.table[editedTradeIndex] = newTrade;
-      // console.log([...req.body.trade, +req.params.id]);
-      // console.log(newTrade);
-      client.release();
+        const client = await pool.connect();
+        await client.query(SQL.UPDATE_EXISTING, [...req.body.trade, +req.params.id]);
+        client.release();
     } catch (err) {
-      console.error(err);
-      res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+        console.error(err);
+        res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
     }
     res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
-  }
-);
+});
 
 app.delete('/api/scalping/db/:id', async (req: Request<DeleteTradeModel>, res) => {
-  const tableAfterDelete = db.table.filter((t) => t.id !== +req.params.id);
-
-  if (tableAfterDelete.length + 1 === db.table.length) {
-    db.table = tableAfterDelete;
     try {
-      const client = await pool.connect();
-      await client.query(SQL.DELETE_BY_ID, [+req.params.id]);
-      client.release();
+        const client = await pool.connect();
+        await client.query(SQL.DELETE_BY_ID, [+req.params.id]);
+        client.release();
     } catch (err) {
-      console.error(err);
-      res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+        console.error(err);
+        res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
     }
-  } else {
-    res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400);
-    return;
-  }
 
-  res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
+    res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
 });
 
 /** clear db for tests */
 app.delete('/__test__/data', (req, res) => {
-  db.table = [];
-  res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
+    dbTable = 'trade_empty_for_tests';
+    res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
 });
 
 app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at https://localhost:${port}`);
+    console.log(`⚡️[server]: Listening on port: ${port}`);
 });

@@ -39,12 +39,12 @@ export default class Trade {
 
   toArray() {
     return [
-      this.name,
-      this.amount,
-      this.buy,
-      this.sell,
-      this.fee,
-      this.singlefee,
+      String(this.name),
+      Number(this.amount),
+      Number(this.buy),
+      Number(this.sell),
+      Number(this.fee),
+      Boolean(this.singlefee),
     ];
   }
 }
