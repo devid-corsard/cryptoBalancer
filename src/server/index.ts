@@ -100,6 +100,38 @@ app.post('/api/scalping/db', async (req, res: Response<{ id: number }>) => {
     }
 });
 
+
+/** UPDATE TRADE */
+app.put('/api/scalping/db/:id', async (req: Request<{ id: string }, never, UpdateTradeModel>, res) => {
+    if (!req.body.trade) {
+        res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400);
+        return;
+    }
+
+    try {
+        const client = await pool.connect();
+        const { rows } = await client.query(SQL.SELECT_BY_ID, [+req.params.id])
+        if (!rows.length) {
+            res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
+            return;
+        }
+    } catch (err) {
+        console.error(err);
+        res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
+
+    try {
+        const client = await pool.connect();
+        await client.query(SQL.UPDATE_EXISTING, [...req.body.trade, +req.params.id]);
+        client.release();
+    } catch (err) {
+        console.error(err);
+        res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
+    res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
+});
+
+/** DUBLICATE TRADE */
 app.post('/api/scalping/db/:id', async (req: Request<DublicateTradeModel>, res: Response<{ id: number }>) => {
     try {
         const client = await pool.connect();
@@ -125,23 +157,6 @@ app.post('/api/scalping/db/:id', async (req: Request<DublicateTradeModel>, res: 
     }
 });
 
-app.put('/api/scalping/db/:id', async (req: Request<{ id: string }, never, UpdateTradeModel>, res) => {
-    if (!req.body.trade) {
-        res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400);
-        return;
-    }
-
-    try {
-        const client = await pool.connect();
-        await client.query(SQL.UPDATE_EXISTING, [...req.body.trade, +req.params.id]);
-        client.release();
-    } catch (err) {
-        console.error(err);
-        res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
-    }
-    res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
-});
-
 app.delete('/api/scalping/db/:id', async (req: Request<DeleteTradeModel>, res) => {
     try {
         const client = await pool.connect();
@@ -157,7 +172,7 @@ app.delete('/api/scalping/db/:id', async (req: Request<DeleteTradeModel>, res) =
 
 /** clear db for tests */
 app.delete('/__test__/data', (req, res) => {
-    dbTable = 'trade_empty_for_tests';
+    // dbTable = 'trade_empty_for_tests';
     res.sendStatus(HTTP_STATUSES.NO_CONTENT_204);
 });
 

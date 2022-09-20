@@ -91,6 +91,36 @@ exports.app.post('/api/scalping/db', (req, res) => __awaiter(void 0, void 0, voi
         res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
     }
 }));
+/** UPDATE TRADE */
+exports.app.put('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!req.body.trade) {
+        res.sendStatus(exports.HTTP_STATUSES.BAD_REQUEST_400);
+        return;
+    }
+    try {
+        const client = yield pool.connect();
+        const { rows } = yield client.query(SQL.SELECT_BY_ID, [+req.params.id]);
+        if (!rows.length) {
+            res.sendStatus(exports.HTTP_STATUSES.NOT_FOUND_404);
+            return;
+        }
+    }
+    catch (err) {
+        console.error(err);
+        res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
+    try {
+        const client = yield pool.connect();
+        yield client.query(SQL.UPDATE_EXISTING, [...req.body.trade, +req.params.id]);
+        client.release();
+    }
+    catch (err) {
+        console.error(err);
+        res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+    }
+    res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
+}));
+/** DUBLICATE TRADE */
 exports.app.post('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const client = yield pool.connect();
@@ -109,22 +139,6 @@ exports.app.post('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0,
         console.error(err);
         res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
     }
-}));
-exports.app.put('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    if (!req.body.trade) {
-        res.sendStatus(exports.HTTP_STATUSES.BAD_REQUEST_400);
-        return;
-    }
-    try {
-        const client = yield pool.connect();
-        yield client.query(SQL.UPDATE_EXISTING, [...req.body.trade, +req.params.id]);
-        client.release();
-    }
-    catch (err) {
-        console.error(err);
-        res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
-    }
-    res.sendStatus(exports.HTTP_STATUSES.NO_CONTENT_204);
 }));
 exports.app.delete('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
