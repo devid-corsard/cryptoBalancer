@@ -66,6 +66,7 @@ exports.app.get(['/', '/:path'], (req, res) => {
     }
     res.sendStatus(404);
 });
+/** GET ALL TRADES */
 exports.app.get('/api/scalping/db', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const client = yield pool.connect();
@@ -141,6 +142,7 @@ exports.app.post('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0,
         res.sendStatus(exports.HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
     }
 }));
+/** DELETE TRADE */
 exports.app.delete('/api/scalping/db/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const client = yield pool.connect();

@@ -69,7 +69,7 @@ app.get(['/', '/:path'], (req: Request<{ path: string }>, res: Response<HTMLBase
 
     res.sendStatus(404);
 });
-
+/** GET ALL TRADES */
 app.get('/api/scalping/db', async (req, res: Response<TradeViewModel[]>) => {
     try {
         const client = await pool.connect();
@@ -156,7 +156,7 @@ app.post('/api/scalping/db/:id', async (req: Request<DublicateTradeModel>, res: 
         res.sendStatus(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
     }
 });
-
+/** DELETE TRADE */
 app.delete('/api/scalping/db/:id', async (req: Request<DeleteTradeModel>, res) => {
     try {
         const client = await pool.connect();
